@@ -21,7 +21,7 @@ public class Algorithm {
 
 
 
-    public void executionPlan1 () throws InterruptedException{
+    public void executionPlan1 (){
         compute(processor1);
         compute(processor1);
         compute(processor1);
@@ -39,15 +39,15 @@ public class Algorithm {
  */
         for(Buffer i : processor1.outChannels)
         {
-        	//Message m = new Message(MessageType.SEND);
+        	Message m = new Message(MessageType.SEND);
         	//processor1.sendMessgeTo(m,i);
-        	processor1.sendMessgeTo(new Message(MessageType.SEND), i);
+        	processor1.sendMessgeTo(m, i);
         	processor1.sendMessgeTo(new Message(MessageType.RECEIVE), i);
         	processor1.sendMessgeTo(new Message(MessageType.ALGORITHM), i);
  			processor1.sendMessgeTo(new Message(MessageType.COMPUTATION), i);
  			processor1.sendMessgeTo(new Message(MessageType.ALGORITHM), i);
         	
-				Thread.sleep(3000);
+//				Thread.sleep(3000);
 			
         
         }

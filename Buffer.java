@@ -49,7 +49,7 @@ public class Buffer extends Observable {
     public void saveMessage(Message message) {
         this.messages.add(message);
         setChanged();
-        notifyObservers();
+        notifyObservers(message);
     }
 
     int getTotalMessageCount() {
