@@ -1,6 +1,3 @@
-package com.sjsu.chandylamport;
-
-
 /**
  * Messages that can be passed
  * @author Sample
@@ -11,9 +8,10 @@ public enum  MessageType {
 	 */
     COMPUTATION,
     //TODO: Add more message types SEND and RECIEVE
-	ALGORITHM,
-	MARKER,
 	SEND,
-	RECEIVE
+	RECEIVE,
+	ALGORITHM,
+
+	MARKER
     
 }

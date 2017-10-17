@@ -1,5 +1,3 @@
-package com.sjsu.chandylamport;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Observable;

@@ -1,6 +1,3 @@
-package com.sjsu.chandylamport;
-
-
 public class Message {
 	MessageType messageType;
 

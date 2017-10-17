@@ -1,5 +1,3 @@
-package com.sjsu.chandylamport;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -7,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
-import java.lang.Object;
 
 /**
  * Performs all the processor related tasks
@@ -18,8 +15,8 @@ import java.lang.Object;
 
 
 public class Processor implements Observer {
-	private int messageCount = 0;
 
+    Map<Buffer,Thread> recorderThread;
     List<Buffer> inChannels = new ArrayList<>();
 
     /**
@@ -27,14 +24,14 @@ public class Processor implements Observer {
      * //TODO: Homework: Use appropriate list implementation and replace null assignment with that
      *
      */
-    List<Buffer> outChannels = new ArrayList<>();
+    List<Buffer> outChannels = null;
 
     /**
      * This is a map that will record the state of each incoming channel and all the messages
      * that have been received by this channel since the arrival of marker and receipt of duplicate marker
      * //TODO: Homework: Use appropriate Map implementation.
      */
-    Map<Buffer, List<Message>> channelState = new HashMap <Buffer, List<Message>>();
+    Map<Buffer, List<Message>> channelState = null;
 
     /**
      * This map can be used to keep track of markers received on a channel. When a marker arrives at a channel
@@ -43,34 +40,25 @@ public class Processor implements Observer {
      * or not). If the entry does not exist then do a put. If an entry already exists then increment the integer value
      * and do a put again.
      */
-    Map<Buffer, Integer> channelMarkerCount = new HashMap <Buffer, Integer>();
-    Map<Buffer, RecorderThread> channelRecorder = new HashMap<Buffer,RecorderThread>();
-    
-    public int getMarkerCount(Buffer i) {
-    	return channelMarkerCount.get(i);
-    }
+    Map<Buffer, Integer> channelMarkerCount = null;
+
+
     /**
      * @param id of the processor
      */
-
-  private int id;
-    
-    public int getMessageCount() {
-    		return this.messageCount;
-    }
-    
-    
     public Processor(int id, List<Buffer> inChannels, List<Buffer> outChannels) {
         this.inChannels = inChannels;
         this.outChannels = outChannels;
         //TODO: Homework make this processor as the observer for each of its inChannel
         //Hint [loop through each channel and add Observer (this) . Feel free to use java8 style streams if it makes
         // it look cleaner]
-        for(Buffer i : inChannels)
-        { i.addObserver(this);}
-        for(Buffer channel : inChannels){
-        	channelMarkerCount.put(channel, 0);
-        }
+        recorderThread = new HashMap<Buffer,Thread>();
+        channelMarkerCount = new HashMap<>();
+        channelState = new HashMap<>();
+        inChannels.stream().forEach(in -> {in.addObserver(this); channelMarkerCount.put(in,0);});
+        outChannels.stream().forEach(out -> channelMarkerCount.put(out,0));
+
+
     }
 
 
@@ -85,7 +73,7 @@ public class Processor implements Observer {
     }
 
     /**
-     * This method marks the channel as empty
+     * THis method marks the channel as empty
      * @param channel
      */
     public void recordChannelAsEmpty(Buffer channel) {
@@ -93,27 +81,6 @@ public class Processor implements Observer {
         channelState.put(channel, Collections.emptyList());
 
     }
-
-    /**
-     * You should send a message to this recording so that recording is stopped
-     * //TODO: Homework: Move this method recordChannel(..) out of this class. Start this method in a
-     *                  separate thread. This thread will start when the marker arrives and it will stop
-     *                  when a duplicate marker is received. This means that each processor will have the
-     *                  capability to start and stop this channel recorder thread. The processor manages the
-     *                  record Channel thread. Processor will have the ability to stop the thread.
-     *                  Feel free to use any java concurrency  and thread classes to implement this method
-     *
-     *
-     * @param channel The input channel which has to be monitored
-     */
-	public void recordChannel(Buffer channel) {
-		RecorderThread recorder = channelRecorder.get(channel);
-		//start recording on channel
-		recorder.start();
-		synchronized(recorder) {
-			recorder.notify();
-		}
-	}
 
 
     /**
@@ -134,118 +101,91 @@ public class Processor implements Observer {
      * @return true if this is the first marker false otherwise
      */
     public boolean isFirstMarker(Buffer fromChannel) {
-        //TODO: Implement this method
+        //TODO: Implemetent this method
         //[ Hint : Use the channelMarkerCount]
-    	boolean bool = false;
-    	if (getMarkerCount(fromChannel) == 1)
-    	{
-    		//means first marker message
-    		System.out.println("First Marker from " + fromChannel.getLabel());
-    		bool = true;
-    	}
-    	else if(getMarkerCount(fromChannel) > 1)
-    	{
-    		System.out.println("Duplicate Marker from " + fromChannel.getLabel());
-    		 bool = false;
-    	}
-		return bool;    	
+        if(channelMarkerCount.get(fromChannel) < 1)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+
     }
-    
-    
 
     /**
      * Gets called when a Processor receives a message in its buffer
      * Processes the message received in the buffer
      */
     public void update(Observable observable, Object arg) {
-    	
-		// Thread t= new Thread();
-    	Buffer fromChannel = (Buffer) observable;
-        Message message = (Message) arg;
-        Processor fromProcessor = message.getFrom();
-//        Buffer fromChannel - fromProcessor.
-        if (message.getMessageType().equals(MessageType.MARKER)) {
-//            //TODO: homework Record from Channel as Empty
-//            if (message.getMessageType().equals(MessageType.MARKER)) {
-//                recordChannelAsEmpty(fromChannel);
-//            //TODO: add logic here so that if the marker comes back to the initiator then it should stop recording
-//                if(channelMarkerCount.get(fromChannel)>=1) {
-//            		stopChannel(fromChannel);
-//            }
-            for(Buffer c : inChannels) {
-            	if(c!= fromChannel) {
-            		recordChannel(c)  ;
-            	}
-            }
-            if (isFirstMarker(fromChannel)) {
-            recordChannelAsEmpty(fromChannel);
-            channelMarkerCount.put(fromChannel, channelMarkerCount.get(fromChannel) + 1);
 
-			 RecorderThread recorderThread = new RecorderThread(this,fromChannel);
-			 channelRecorder.put(fromChannel, recorderThread);
-			 recorderThread.run();
-        		
-            }else  {
-    			for (RecorderThread recorderThread: channelRecorder.values()){
-        			if(recorderThread.inChannel==fromChannel){
-        				recorderThread.interrupt();
-        			}
-    			}
-        	}
-                
-            
+        Message message = (Message) arg;
+        if (message.getMessageType().equals(MessageType.MARKER)) {
+            Buffer fromChannel = (Buffer) observable;
+            //TODO: homework Record from Channel as Empty
+            //TODO: add logic here so that if the marker comes back to the initiator then it should stop recording
+            if (isFirstMarker(fromChannel)) {
+                recordChannelAsEmpty(fromChannel);
+                channelMarkerCount.put(fromChannel, channelMarkerCount.get(fromChannel) + 1);
+                //From the other incoming Channels (excluding the fromChannel which has sent the marker
+                // startrecording messages
+                //TODO: homework: Trigger the recorder thread from this processor so that it starts recording for each channel
+                // Exclude the "Channel from which marker has arrived.
+                Thread rThread = new RecorderThread(this, fromChannel);
+                recorderThread.put(fromChannel,rThread);
+                recorderThread.get(fromChannel).run();
+
+
+            } else {
+                //Means it isDuplicateMarkerMessage.
+                //TODO: Homework Stop the recorder thread.
+
+                Thread.currentThread().interrupt();
+
+
+            }
             //TODO: Homework Send marker messages to each of the out channels
             // Hint: invoke  sendMessgeTo((Message) arg, outChannel) for each of the out channels
-                
-                for(Buffer c : this.outChannels) {
-	        		Message m = new Message(MessageType.MARKER);
-	        		sendMessgeTo(m, c);
-	        }
+            outChannels.stream().forEach(out -> sendMessgeTo(new Message(MessageType.MARKER),out));
+
         }
         else{
-            if (message.getMessageType().equals(MessageType.ALGORITHM)) 
-            {
-                System.out.println("Processing Algorithm message....");
-                }
-
-        }
-//        }
-//        else{
-//            if (message.getMessageType().equals(MessageType.ALGORITHM)) {
-//                System.out.println("Processing Algorithm message....");
-//            }  //There is no other type
-//        }
-
-
-//    }
-                
+            if (!message.getMessageType().equals(MessageType.MARKER)) {
+                System.out.println("Processing " +  message.getMessageType().toString() + " message....");
+            }  //There is no other type
         }
 
 
-//    private void stopChannel(Buffer fromChannel) {
-//		// TODO Auto-generated method stub
-//		
-//	}
+    }
 
-	public void initiateSnapShot() {
+    public void initiateSnapShot(){
         recordMyCurrentState();
         //TODO: Follow steps from Chandy Lamport algorithm. Send out a marker message on outgoing channel
         //[Hint: Use the sendMessgeTo method
-        for(Buffer outchannel : outChannels)
-        {
-            Message m = new Message(MessageType.MARKER);
-            //channelMarkerCount.put(outchannel, 0);
-            sendMessgeTo(m,outchannel);
-        }
-
+        outChannels.stream().forEach(out -> sendMessgeTo(new Message(MessageType.MARKER),out));
         //TODO: homework Start recording on each of the input channels
 
-        for(Buffer inchannel : inChannels)
-        {
-        	//channelMarkerCount.put(inchannel, 0);
-            RecorderThread recorderThread = new RecorderThread(this,inchannel);
-            channelRecorder.put(inchannel, recorderThread);
-            recorderThread.run();
-        }
+        inChannels.stream().forEach(in -> {Thread rThread = new RecorderThread(this, in);
+        recorderThread.put(in,rThread);
+        recorderThread.get(in).run();
+
+        });
+
     }
+
+    public void printState()
+    {
+        for(List<Message> messageList : channelState.values())
+        {
+            for(Message m : messageList)
+            {
+                System.out.println("Messages in this Processor's State: " + m.getMessageType().toString());
+            }
+        }
+
+    }
+
+
+
 }

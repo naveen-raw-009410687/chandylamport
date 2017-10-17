@@ -1,5 +1,3 @@
-package com.sjsu.chandylamport;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,7 +6,7 @@ import java.util.List;
  */
 public class Main {
 
-    public static void main(String args[]) throws InterruptedException {
+    public static void main(String args[]) {
 
         //Channels from P3 to P1 and P2 to P1
         Buffer channelP31 = new Buffer();
@@ -54,11 +52,14 @@ public class Main {
          * //TODO: Homework: initiate snapshot
          * [Hint: call the initiateSnapshot method ]
          */
+
         Algorithm a = new Algorithm(processor1,processor2,processor3);
-        a.executionPlan1();
-        a.executionPlanP2();
-        a.executionPlanP3();
+        (new Thread(new Executor1(a))).start();
+        (new Thread(new Executor2(a))).start();
+        (new Thread(new Executor3(a))).start();
         processor1.initiateSnapShot();
+
+
 
     }
 
